@@ -30,6 +30,17 @@ export async function POST(request) {
 
     const diffText = await file.text();
 
+    const firstNonEmpty = diffText.split('\n').find(line => line.trim().length);
+    if (!firstNonEmpty || !/^diff --git /i.test(firstNonEmpty)) {
+     return new Response(JSON.stringify({
+        error: 'Invalid diff format. Please upload a standard git diff starting with “diff --git”.'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
       throw new Error("API_KEY environment variable not set.");
