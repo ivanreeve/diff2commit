@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
-import { Card } from '@/components/ui/card';      // adjust as needed
-import { Button } from '@/components/ui/button';  // adjust as needed
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { FaUpload, FaMagic, FaSpinner, FaCopy } from 'react-icons/fa';
+import { CopyToClipboard } from 'react-copy-to-clipboard';
 
 export default function Home() {
   const [subject, setSubject] = useState('');
@@ -15,6 +16,31 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [subjectCopied, setSubjectCopied] = useState(false);
   const [descriptionCopied, setDescriptionCopied] = useState(false);
+
+  const fileInputRef = useRef(null);
+
+  const resetOutputs = () => {
+    setSubject('');
+    setDescription('');
+    setSubjectCopied(false);
+    setDescriptionCopied(false);
+  };
+
+  const validateFile = (file) => {
+    const name = file.name.toLowerCase();
+    const ok =
+      file.type === 'text/plain' ||
+      name.endsWith('.diff');
+    if (!ok) {
+      setErrorMessage('Invalid file type. Please upload a .diff file.');
+      resetOutputs();
+      setSelectedFile(null);
+    } else {
+      setErrorMessage('');
+      resetOutputs();
+    }
+    return ok;
+  };
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -31,49 +57,43 @@ export default function Home() {
     setIsDragging(false);
 
     const file = e.dataTransfer.files[0];
-    if (file && (file.type === 'text/plain' || file.name.endsWith('.diff'))) {
+    if (file && validateFile(file)) {
       setSelectedFile(file);
-      setErrorMessage('');
-      setSubject('');
-      setDescription('');
-    } else {
-      setSelectedFile(null);
-      setErrorMessage('Invalid file type. Please upload a diff file (.diff).');
     }
   };
 
   const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file && (file.type === 'text/plain' || file.name.endsWith('.diff'))) {
+    const file = e.target.files && e.target.files[0];
+    if (file && validateFile(file)) {
       setSelectedFile(file);
-      setErrorMessage('');
-      setSubject('');
-      setDescription('');
-    } else {
-      setSelectedFile(null);
-      setErrorMessage('Invalid file type. Please upload a diff file (.diff).');
-      e.target.value = null;
     }
+    // allow same-file reselect
+    e.target.value = '';
   };
 
-  const handleGenerateClick = async () => {
+  const handleGenerateClick = async (e) => {
+    e.preventDefault();
     if (!selectedFile) return;
+
     setIsLoading(true);
+    setSubjectCopied(false);
+    setDescriptionCopied(false);
 
     const formData = new FormData();
     formData.append('file', selectedFile);
 
     try {
-      const response = await axios.post('/api/process', formData);
-      const data = response.data;
+      const { data } = await axios.post('/api/process', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       setSubject(data.subject || '');
       setDescription(data.description || '');
-    } catch (error) {
-      console.error('Error processing file:', error);
+    } catch (err) {
+      console.error(err);
       setSubject('Error');
       setDescription(
-        error.response?.data?.description ||
-        error.message ||
+        (err.response && err.response.data && err.response.data.description) ||
+        err.message ||
         'An error occurred during processing.'
       );
     } finally {
@@ -81,39 +101,43 @@ export default function Home() {
     }
   };
 
-
   return (
-    <main className="min-h-screen p-8 bg-gray-100">
+    <main className="min-h-screen p-8 bg-gray-900 text-gray-100">
       <div className="max-w-4xl mx-auto space-y-8">
-
+        {/* File Upload Card */}
         <Card
-          className={`p-8 border-2 border-dashed ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-            } rounded-lg text-center cursor-pointer`}
+          className={`p-8 border-2 border-dashed rounded-lg text-center cursor-pointer ${isDragging
+              ? 'border-teal-400 bg-gray-800'
+              : 'border-gray-700 bg-gray-800'
+            }`}
+          onClick={() => fileInputRef.current?.click()}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
           <div className="space-y-4">
             {selectedFile ? (
-              <p className="text-gray-700 font-medium">
+              <p className="text-gray-100 font-medium">
                 Selected: {selectedFile.name}
               </p>
             ) : (
-              <p className="text-gray-600">
-                Drag and drop your diff file here, or
+              <p className="text-gray-400">
+                Drag and drop your .diff file here, or
               </p>
             )}
+
             <input
               type="file"
-              id="fileInput"
+              ref={fileInputRef}
               className="hidden"
+              accept=".diff,text/plain"
               onChange={handleFileUpload}
-              accept=".diff"
             />
+
             <Button
               variant="outline"
-              onClick={() => document.getElementById('fileInput').click()}
-              className="bg-blue-500 text-white hover:bg-blue-600"
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-teal-400 text-gray-900 hover:bg-teal-500 disabled:opacity-50"
               disabled={isLoading}
             >
               <FaUpload className="mr-2 h-4 w-4" />
@@ -126,8 +150,13 @@ export default function Home() {
           <p className="text-red-500 text-sm mt-2">{errorMessage}</p>
         )}
 
+        {/* Generate Button */}
         <Button
-          className="w-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          className={
+            'w-full bg-teal-400 text-gray-900 hover:bg-teal-500 ' +
+            'disabled:opacity-50 disabled:cursor-not-allowed ' +
+            'flex items-center justify-center'
+          }
           onClick={handleGenerateClick}
           disabled={!selectedFile || isLoading}
         >
@@ -139,48 +168,68 @@ export default function Home() {
           {isLoading ? 'Generating...' : 'Generate'}
         </Button>
 
-        {/* Result output */}
-        {subject && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold">Subject</h2>
-              <div className="flex items-center">
-                <p className="flex-1">{subject}</p>
-                <CopyToClipboard
-                  text={subject}
-                  onCopy={() => setSubjectCopied(true)}
+        {/* Always-visible Subject & Description */}
+        <div className="space-y-6 mt-6">
+          {/* Subject Field */}
+          <div className="bg-gray-800 border border-gray-700 p-4 rounded-lg shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-100 mb-2">
+              Subject
+            </h2>
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Subject will appear here..."
+                className="flex-1 bg-gray-700 text-gray-100 p-2 rounded focus:outline-none focus:ring-2 focus:ring-teal-400"
+              />
+              <CopyToClipboard
+                text={subject}
+                onCopy={() => setSubjectCopied(true)}
+              >
+                <Button
+                  variant="ghost"
+                  className="text-teal-400 hover:text-teal-500"
                 >
-                  <Button className="ml-2">
-                    <FaCopy className="h-4 w-4" />
-                  </Button>
-                </CopyToClipboard>
-                {subjectCopied && (
-                  <span className="ml-2 text-green-500">Copied!</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold">Description</h2>
-              <div className="flex items-start">
-                <pre className="flex-1 whitespace-pre-wrap">
-                  {description}
-                </pre>
-                <CopyToClipboard
-                  text={description}
-                  onCopy={() => setDescriptionCopied(true)}
-                >
-                  <Button className="ml-2">
-                    <FaCopy className="h-4 w-4" />
-                  </Button>
-                </CopyToClipboard>
-                {descriptionCopied && (
-                  <span className="ml-2 text-green-500">Copied!</span>
-                )}
-              </div>
+                  <FaCopy />
+                </Button>
+              </CopyToClipboard>
+              {subjectCopied && (
+                <span className="text-teal-400">Copied!</span>
+              )}
             </div>
           </div>
-        )}
 
+          {/* Description Field */}
+          <div className="bg-gray-800 border border-gray-700 p-4 rounded-lg shadow-sm">
+            <h2 className="text-xl font-semibold text-gray-100 mb-2">
+              Description
+            </h2>
+            <div className="flex items-start space-x-2">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Description will appear here..."
+                rows={6}
+                className="flex-1 bg-gray-700 text-gray-100 p-2 rounded focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"
+              />
+              <CopyToClipboard
+                text={description}
+                onCopy={() => setDescriptionCopied(true)}
+              >
+                <Button
+                  variant="ghost"
+                  className="text-teal-400 hover:text-teal-500 mt-1"
+                >
+                  <FaCopy />
+                </Button>
+              </CopyToClipboard>
+              {descriptionCopied && (
+                <span className="text-teal-400 mt-1">Copied!</span>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

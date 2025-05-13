@@ -1,95 +1,133 @@
 import { GoogleGenAI } from "@google/genai";
-import fs from 'fs';
-import path from 'path';
+import fs from "fs/promises";
+import path from "path";
 
-// Construct the absolute path to the instructions file
-const instructionsPath = path.join(process.cwd(), 'src', 'lib', 'system_instructions.txt');
-// Read the file content
-let systemInstructions;
-try {
-  systemInstructions = fs.readFileSync(instructionsPath, 'utf-8');
-} catch (error) {
-  console.error("Error reading system instructions file:", error);
-  // Provide a fallback or handle the error appropriately
-  systemInstructions = "Error: Could not load system instructions."; 
-}
+// ensure we run under Node.js so `fs` works
+export const runtime = "nodejs";
 
-const MODEL_NAME = "gemini-2.0-flash"; // Using flash for potentially faster responses
+// where your system instructions live
+const INSTRUCTIONS_PATH = path.join(
+  process.cwd(),
+  "src",
+  "lib",
+  "system_instructions.txt"
+);
 
 export async function POST(request) {
+  // 1) load your system instructions at request time
+  let systemInstructions;
   try {
-    const formData = await request.formData();
-    const file = formData.get('file');
+    systemInstructions = await fs.readFile(INSTRUCTIONS_PATH, "utf-8");
+  } catch (err) {
+    console.error("Could not load system instructions:", err);
+    return new Response(
+      JSON.stringify({
+        subject: "Server Error",
+        description: "Internal: failed to load system instructions.",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
 
-    if (!file) {
-      return new Response(JSON.stringify({ error: 'No file provided' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+  try {
+    // 2) grab the uploaded file
+    const formData = await request.formData();
+    const file = formData.get("file");
+    if (!file || typeof file.text !== "function") {
+      return new Response(
+        JSON.stringify({
+          subject: "Error",
+          description: "No file provided.",
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
     const diffText = await file.text();
 
-    const firstNonEmpty = diffText.split('\n').find(line => line.trim().length);
-    if (!firstNonEmpty || !/^diff --git /i.test(firstNonEmpty)) {
-     return new Response(JSON.stringify({
-        error: 'Invalid diff format. Please upload a standard git diff starting with “diff --git”.'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    // 3) basic git-diff format check
+    const firstLine = diffText
+      .split("\n")
+      .find((ln) => ln.trim().length > 0);
+    if (!firstLine || !/^diff --git /i.test(firstLine)) {
+      return new Response(
+        JSON.stringify({
+          subject: "Error",
+          description:
+            'Invalid diff format. Please upload a git diff starting with "diff --git".',
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
-
-    const apiKey = process.env.API_KEY;
+    // 4) get your API key
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("API_KEY environment variable not set.");
+      console.error("GEMINI_API_KEY missing");
+      return new Response(
+        JSON.stringify({
+          subject: "Server Error",
+          description: "Internal: API key not configured.",
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     }
 
-    // Initialize GoogleGenAI with apiKey
-    const genAI = new GoogleGenAI({ apiKey: apiKey }); 
+    // 5) call Gemini
+    const ai = new GoogleGenAI({ apiKey });
+    const prompt = `${systemInstructions}\n\nDiff:\n${diffText}`;
 
-    const prompt = systemInstructions + "\n\nDiff:\n" + diffText;
-
-    // Generate content using the specified model and prompt
-    const result = await genAI.models.generateContent({
-      model: MODEL_NAME,
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
       contents: prompt,
+      config: {
+        // ask Gemini to give you raw JSON
+        responseMimeType: "application/json",
+      },
     });
 
-    // Extract the text response
-    const text = result.text; 
-    
-    // Attempt to parse the response as JSON
-    let commitData;
+    // 6) parse JSON (no backticks anymore)
+    let json;
     try {
-      // Remove potential markdown backticks if present
-      const cleanedText = text.replace(/^```json\n?|\n?```$/g, '');
-      commitData = JSON.parse(cleanedText);
-    } catch (parseError) {
-      console.error("Error parsing LLM response:", parseError, "Raw response:", text);
-      // Fallback if JSON parsing fails
-       commitData = {
-         subject: 'Error processing response',
-         description: 'Could not parse the generated commit message.',
-       };
+      json = JSON.parse(response.text);
+    } catch (err) {
+      console.error("LLM returned non-JSON:", err, response.text);
+      json = {
+        subject: "Error processing response",
+        description: "Model did not return valid JSON.",
+      };
     }
 
-    return new Response(JSON.stringify({
-      subject: commitData.subject || 'Subject not generated',
-      description: commitData.description || 'Description not generated'
-    }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-  } catch (error) {
-    console.error("Error in API route:", error);
-    return new Response(JSON.stringify({ 
-      subject: "Server Error", 
-      description: error.message || "An internal server error occurred." 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        subject: json.subject ?? "No subject returned",
+        description: json.description ?? "No description returned",
+      }),
+      { headers: { "Content-Type": "application/json" } }
+    );
+  } catch (err) {
+    console.error("Unexpected error in POST handler:", err);
+    return new Response(
+      JSON.stringify({
+        subject: "Server Error",
+        description: err.message || "An internal error occurred.",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
-} 
+}
