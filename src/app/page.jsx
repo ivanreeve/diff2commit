@@ -4,8 +4,35 @@ import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FaUpload, FaMagic, FaSpinner, FaCopy } from 'react-icons/fa';
+import { FaUpload, FaMagic, FaCopy, FaCheck } from 'react-icons/fa';
+import { CgSpinner } from "react-icons/cg";
 import { CopyToClipboard } from 'react-copy-to-clipboard';
+
+// Custom scrollbar styles
+const scrollbarStyles = `
+  /* Firefox */
+  * {
+    scrollbar-width: thick;
+    scrollbar-color: #2dd4bf #1f2937;
+  }
+  
+  /* Chrome, Edge, and Safari */
+  *::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  *::-webkit-scrollbar-track {
+    background: #1f2937;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    background-color: #2dd4bf;
+  }
+  
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #14b8a6;
+  }
+`;
 
 export default function Home() {
   const [subject, setSubject] = useState('');
@@ -14,6 +41,7 @@ export default function Home() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerated, setIsGenerated] = useState(false);
   const [subjectCopied, setSubjectCopied] = useState(false);
   const [descriptionCopied, setDescriptionCopied] = useState(false);
 
@@ -22,6 +50,7 @@ export default function Home() {
   const resetOutputs = () => {
     setSubject('');
     setDescription('');
+    setIsGenerated(false);
     setSubjectCopied(false);
     setDescriptionCopied(false);
   };
@@ -81,6 +110,7 @@ export default function Home() {
     if (!selectedFile) return;
 
     setIsLoading(true);
+    setIsGenerated(false);
     setSubjectCopied(false);
     setDescriptionCopied(false);
 
@@ -93,6 +123,7 @@ export default function Home() {
       });
       setSubject(data.subject || '');
       setDescription(data.description || '');
+      setIsGenerated(true);
     } catch (err) {
       console.error(err);
       setSubject('Error');
@@ -101,17 +132,35 @@ export default function Home() {
         err.message ||
         'An error occurred during processing.'
       );
+      setIsGenerated(true); // Still consider it generated even if it's an error
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Handle copy button state
+  const handleCopy = (field) => {
+    if (field === 'subject') {
+      setSubjectCopied(true);
+      setTimeout(() => setSubjectCopied(false), 2000);
+    } else {
+      setDescriptionCopied(true);
+      setTimeout(() => setDescriptionCopied(false), 2000);
+    }
+  };
+
+  // Skeleton loading animation component
+  const Skeleton = ({ className }) => (
+    <div className={`animate-pulse bg-gray-700 rounded ${className}`}></div>
+  );
+
   return (
     <main className="min-h-screen p-8 bg-gray-900 text-gray-100">
+      <style jsx global>{scrollbarStyles}</style>
       <div className="max-w-4xl mx-auto space-y-8">
         {/* File Upload Card */}
         <Card
-          className={`p-8 border-2 border-dashed rounded-lg text-center cursor-pointer ${isDragging
+          className={`p-8 border-2 border-dashed rounded-md text-center cursor-pointer ${isDragging
             ? 'border-teal-400 bg-gray-800'
             : 'border-gray-700 bg-gray-800'
             }`}
@@ -166,7 +215,7 @@ export default function Home() {
           disabled={!selectedFile || isLoading}
         >
           {isLoading ? (
-            <FaSpinner className="mr-2 h-4 w-4 animate-spin" />
+            <CgSpinner className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <FaMagic className="mr-2 h-4 w-4" />
           )}
@@ -176,62 +225,71 @@ export default function Home() {
         {/* Always-visible Subject & Description */}
         <div className="space-y-6 mt-6">
           {/* Subject Field */}
-          <div className="bg-gray-800 border border-gray-700 p-4 rounded-lg shadow-sm">
+          <div className="bg-gray-800 border border-gray-700 p-4 rounded-md shadow-sm">
             <h2 className="text-xl font-semibold text-gray-100 mb-2">
               Subject
             </h2>
             <div className="flex items-center space-x-2">
-              <input
-                type="text"
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Subject will appear here..."
-                className="flex-1 bg-gray-700 text-gray-100 p-2 rounded focus:outline-none focus:ring-2 focus:ring-teal-400"
-              />
+              {isLoading ? (
+                <Skeleton className="flex-1 h-10" />
+              ) : (
+                <input
+                  type="text"
+                  value={subject}
+                  onChange={(e) => isGenerated && setSubject(e.target.value)}
+                  placeholder={isGenerated ? "Subject will appear here..." : "Generate to see subject..."}
+                  className={`flex-1 bg-gray-700 text-gray-100 p-2 rounded focus:outline-none ${isGenerated ? "focus:ring-2 focus:ring-teal-400" : "cursor-not-allowed"}`}
+                  readOnly={!isGenerated}
+                />
+              )}
               <CopyToClipboard
                 text={subject}
-                onCopy={() => setSubjectCopied(true)}
+                onCopy={() => handleCopy('subject')}
+                className="rounded-md"
               >
                 <Button
                   variant="ghost"
                   className="text-teal-400 hover:text-teal-500"
+                  disabled={!isGenerated || !subject}
                 >
-                  <FaCopy />
+                  {subjectCopied ? <FaCheck /> : <FaCopy />}
                 </Button>
               </CopyToClipboard>
-              {subjectCopied && (
-                <span className="text-teal-400">Copied!</span>
-              )}
             </div>
           </div>
 
           {/* Description Field */}
-          <div className="bg-gray-800 border border-gray-700 p-4 rounded-lg shadow-sm">
+          <div className="bg-gray-800 border border-gray-700 p-4 rounded-md shadow-sm">
             <h2 className="text-xl font-semibold text-gray-100 mb-2">
               Description
             </h2>
             <div className="flex items-start space-x-2">
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Description will appear here..."
-                rows={6}
-                className="flex-1 bg-gray-700 text-gray-100 p-2 rounded focus:outline-none focus:ring-2 focus:ring-teal-400 resize-none"
-              />
+              {isLoading ? (
+                <Skeleton className="flex-1 h-36" />
+              ) : (
+                <textarea
+                  value={description}
+                  onChange={(e) => isGenerated && setDescription(e.target.value)}
+                  placeholder={isGenerated ? "Description will appear here..." : "Generate to see description..."}
+                  rows={10}
+                  className={`flex-1 bg-gray-700 text-gray-100 p-2 rounded focus:outline-none ${isGenerated ? "focus:ring-2 focus:ring-teal-400" : "cursor-not-allowed"} resize-none custom-scrollbar max-h-96 overflow-y-auto`}
+                  readOnly={!isGenerated}
+                />
+              )}
               <CopyToClipboard
                 text={description}
-                onCopy={() => setDescriptionCopied(true)}
+                onCopy={() => handleCopy('description')}
+                className="rounded-md"
+                disabled={!isGenerated || !description}
               >
                 <Button
                   variant="ghost"
                   className="text-teal-400 hover:text-teal-500 mt-1"
+                  disabled={!isGenerated || !description}
                 >
-                  <FaCopy />
+                  {descriptionCopied ? <FaCheck /> : <FaCopy />}
                 </Button>
               </CopyToClipboard>
-              {descriptionCopied && (
-                <span className="text-teal-400 mt-1">Copied!</span>
-              )}
             </div>
           </div>
         </div>
