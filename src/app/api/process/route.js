@@ -2,10 +2,8 @@ import { GoogleGenAI } from "@google/genai";
 import fs from "fs/promises";
 import path from "path";
 
-// ensure we run under Node.js so `fs` works
 export const runtime = "nodejs";
 
-// where your system instructions live
 const INSTRUCTIONS_PATH = path.join(
   process.cwd(),
   "src",
@@ -14,8 +12,8 @@ const INSTRUCTIONS_PATH = path.join(
 );
 
 export async function POST(request) {
-  // 1) load your system instructions at request time
   let systemInstructions;
+
   try {
     systemInstructions = await fs.readFile(INSTRUCTIONS_PATH, "utf-8");
   } catch (err) {
@@ -33,7 +31,6 @@ export async function POST(request) {
   }
 
   try {
-    // 2) grab the uploaded file
     const formData = await request.formData();
     const file = formData.get("file");
     if (!file || typeof file.text !== "function") {
@@ -51,7 +48,6 @@ export async function POST(request) {
 
     const diffText = await file.text();
 
-    // 3) basic git-diff format check
     const firstLine = diffText
       .split("\n")
       .find((ln) => ln.trim().length > 0);
@@ -69,7 +65,6 @@ export async function POST(request) {
       );
     }
 
-    // 4) get your API key
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.error("GEMINI_API_KEY missing");
@@ -85,20 +80,17 @@ export async function POST(request) {
       );
     }
 
-    // 5) call Gemini
     const ai = new GoogleGenAI({ apiKey });
     const prompt = `${systemInstructions}\n\nDiff:\n${diffText}`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash-preview-04-17",
       contents: prompt,
       config: {
-        // ask Gemini to give you raw JSON
         responseMimeType: "application/json",
       },
     });
 
-    // 6) parse JSON (no backticks anymore)
     let json;
     try {
       json = JSON.parse(response.text);
