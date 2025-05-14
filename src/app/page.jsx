@@ -71,6 +71,11 @@ export default function Home() {
     e.target.value = '';
   };
 
+  const handleButtonClick = (e) => {
+    e.stopPropagation(); // Stop the event from bubbling up to the Card
+    fileInputRef.current?.click();
+  };
+
   const handleGenerateClick = async (e) => {
     e.preventDefault();
     if (!selectedFile) return;
@@ -107,8 +112,8 @@ export default function Home() {
         {/* File Upload Card */}
         <Card
           className={`p-8 border-2 border-dashed rounded-lg text-center cursor-pointer ${isDragging
-              ? 'border-teal-400 bg-gray-800'
-              : 'border-gray-700 bg-gray-800'
+            ? 'border-teal-400 bg-gray-800'
+            : 'border-gray-700 bg-gray-800'
             }`}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={handleDragOver}
@@ -136,7 +141,7 @@ export default function Home() {
 
             <Button
               variant="outline"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleButtonClick}
               className="bg-teal-400 text-gray-900 hover:bg-teal-500 disabled:opacity-50"
               disabled={isLoading}
             >
