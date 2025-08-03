@@ -47,6 +47,8 @@ Open [http://localhost:3000](http://localhost:3000) to access the application.
 2. **Upload your diff file** using one of these methods:
    - Drag and drop the `.diff` file onto the upload area
    - Click "Choose File" to browse and select your diff file
+   
+   > **Important**: The file must be a valid git diff starting with `diff --git`
 
 3. **Generate commit message** by clicking the "Generate" button
 
@@ -69,44 +71,53 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 1. Visit [Google AI Studio](https://aistudio.google.com/)
 2. Sign in with your Google account
-3. Create a new API key
+3. Create a new API key in the API Keys section
 4. Add the key to your `.env.local` file
+
+> **Note**: The application uses Gemini 2.5 Flash model for optimal performance and cost-effectiveness.
 
 ## 🛠️ Development
 
 This project is built with:
 
-- **Next.js 14** - React framework for production
+- **Next.js 14** (App Router) - React framework for production
 - **Tailwind CSS** - Utility-first CSS framework
-- **Google Gemini AI** - AI model for code analysis
+- **shadcn/ui** - Modern React component library
+- **Google Gemini 2.5 Flash** - AI model for code analysis
 - **Vercel** - Deployment platform
 
 ### Project Structure
 
 ```
 diff2commit/
-├── pages/
-│   ├── api/
-│   │   └── generate.js      # API endpoint for Gemini integration
-│   └── index.js             # Main application page
-├── components/
-│   ├── FileUpload.js        # Drag & drop file upload component
-│   └── CommitGenerator.js   # Commit message generation interface
-├── styles/
-│   └── globals.css          # Global styles and Tailwind imports
-└── public/
-    └── ...                  # Static assets
+├── src/
+│   ├── app/
+│   │   ├── api/process/
+│   │   │   └── route.js         # API endpoint for Gemini integration
+│   │   ├── globals.css          # Global styles and Tailwind imports
+│   │   ├── layout.js            # Root layout component
+│   │   └── page.jsx             # Main application page
+│   ├── components/ui/           # shadcn/ui components
+│   │   ├── button.jsx
+│   │   ├── card.jsx
+│   │   ├── input.jsx
+│   │   ├── skeleton.jsx
+│   │   └── textarea.jsx
+│   └── lib/
+│       ├── system_instructions.txt  # AI prompt instructions
+│       └── utils.js             # Utility functions
+├── public/                      # Static assets
+└── components.json              # shadcn/ui configuration
 ```
 
 ### API Endpoint
 
-The `/api/generate` endpoint accepts POST requests with diff content and returns structured commit messages:
+The `/api/process` endpoint accepts POST requests with multipart form data containing a diff file:
 
 ```javascript
-// Request
-{
-  "diff": "your git diff content here"
-}
+// Request (FormData)
+const formData = new FormData();
+formData.append('file', diffFile);
 
 // Response
 {
@@ -114,6 +125,12 @@ The `/api/generate` endpoint accepts POST requests with diff content and returns
   "description": "Detailed commit description"
 }
 ```
+
+### File Upload Requirements
+
+- **File format**: `.diff` or `.patch` files
+- **Content validation**: Must start with `diff --git`
+- **Upload method**: Multipart form data via drag & drop or file picker
 
 ## 🚀 Deployment
 
@@ -146,3 +163,9 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Google Gemini AI for powering the intelligent commit message generation
+- The Next.js team for the excellent React framework
+- Vercel for seamless deployment and hosting
