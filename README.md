@@ -7,6 +7,8 @@
 
 Say goodbye to "fix stuff" and "updates" commits! This clever Gemini-powered tool takes one look at your messy diffs and magically transforms them into articulate, meaningful commit messages that actually tell the story of what you built. No more staring at the terminal wondering how to describe that complex refactor or bug fix—just let AI do the heavy lifting while you focus on writing great code. Your future self (and your teammates) will thank you for having a git history that reads like poetry instead of cryptic hieroglyphics.
 
+![sample](./sample.png)
+
 ## ✨ Features
 
 - **AI-Powered Analysis**: Leverages Google's Gemini AI to understand code changes contextually
