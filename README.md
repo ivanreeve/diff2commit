@@ -1,5 +1,10 @@
 # Diff2Commit
 
+![stars](https://img.shields.io/github/stars/ivanreeve/text-compression-library)
+![watchers](https://img.shields.io/github/watchers/ivanreeve/text-compression-library)
+![contributors](https://img.shields.io/github/contributors/ivanreeve/text-compression-library)
+![commits](https://img.shields.io/github/commit-activity/w/ivanreeve/text-compression-library/main)
+
 Say goodbye to "fix stuff" and "updates" commits! This clever Gemini-powered tool takes one look at your messy diffs and magically transforms them into articulate, meaningful commit messages that actually tell the story of what you built. No more staring at the terminal wondering how to describe that complex refactor or bug fix—just let AI do the heavy lifting while you focus on writing great code. Your future self (and your teammates) will thank you for having a git history that reads like poetry instead of cryptic hieroglyphics.
 
 ## ✨ Features
