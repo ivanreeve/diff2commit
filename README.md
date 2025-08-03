@@ -44,9 +44,7 @@ Open [http://localhost:3000](http://localhost:3000) to access the application.
 
 1. **Generate a diff file** from your git repository:
    ```bash
-   git diff > my-changes.diff
-   # or for staged changes:
-   git diff --cached > my-changes.diff
+   git diff HEAD~1 HEAD > patch.diff 
    ```
 
 2. **Upload your diff file** using one of these methods:
