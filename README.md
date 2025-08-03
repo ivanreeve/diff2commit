@@ -168,9 +168,3 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Google Gemini AI for powering the intelligent commit message generation
-- The Next.js team for the excellent React framework
-- Vercel for seamless deployment and hosting
