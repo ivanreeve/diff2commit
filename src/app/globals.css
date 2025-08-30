@@ -136,7 +136,7 @@ body {
 
 @layer components {
   .gradient-btn {
-    background: linear-gradient(180deg, #009DFF 0%, #005E99 100%);
+    background: linear-gradient(180deg, #07F 0%, #0D2551 100%);
   }
 
   .gradient-btn:hover {
@@ -152,3 +152,10 @@ body {
 .animate-spin-fast {
   animation: spin-fast 0.2s linear infinite;
 }
+
+/* hide textarea native scrollbars */
+.no-scrollbar {
+  -ms-overflow-style: none;    /* IE & old Edge */
+  scrollbar-width: none;       /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar { display: none; } /* Chrome/Safari */

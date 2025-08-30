@@ -4,44 +4,17 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FaMagic } from 'react-icons/fa';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from "@/components/ui/textarea";
 import { FaCheck } from 'react-icons/fa6';
 import { CgSpinner } from "react-icons/cg";
-import { CopyToClipboard } from 'react-copy-to-clipboard';
 import { MdOutlineContentCopy } from "react-icons/md"
+import { RiSparklingFill } from "react-icons/ri";
+import { LuMail } from "react-icons/lu";
+import { MdOutlineDescription } from "react-icons/md";
 import { FaRegFolderOpen } from "react-icons/fa";
 import Image from 'next/image';
 import logo from '../../public/favicon-dark.svg';
-
-// Custom scrollbar styles
-const scrollbarStyles = `
-  /* Firefox */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: #2dd4bf #1f2937;
-  }
-  
-  /* Chrome, Edge, and Safari */
-  *::-webkit-scrollbar {
-    width: 10px;
-  }
-  
-  *::-webkit-scrollbar-track {
-    background: #1f2937;
-  }
-  
-  *::-webkit-scrollbar-thumb {
-    background-color: #2dd4bf;
-  }
-  
-  *::-webkit-scrollbar-thumb:hover {
-    background-color: #14b8a6;
-  }
-  
-  *::-webkit-scrollbar-button {
-    display: none;
-  }
-`;
 
 export default function Home() {
   const [subject, setSubject] = useState('');
@@ -58,14 +31,6 @@ export default function Home() {
   const [showDescriptionTooltip, setShowDescriptionTooltip] = useState(false);
 
   const fileInputRef = useRef(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 0); // true only when scrolled down
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   const resetOutputs = () => {
     setSubject('');
@@ -122,7 +87,7 @@ export default function Home() {
   };
 
   const handleButtonClick = (e) => {
-    e.stopPropagation(); // Stop the event from bubbling up to the Card
+    e.stopPropagation();
     fileInputRef.current?.click();
   };
 
@@ -153,13 +118,21 @@ export default function Home() {
           err.message ||
           'An error occurred during processing.'
       );
-      setIsGenerated(true); // Still consider it generated even if it's an error
+      setIsGenerated(true);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Handle copy button state
+  const copyToClipboard = async (text, field) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      handleCopy(field);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
   const handleCopy = (field) => {
     if (field === 'subject') {
       setSubjectCopied(true);
@@ -178,7 +151,6 @@ export default function Home() {
     }
   };
 
-  // Skeleton loading animation component
   const Skeleton = ({ className }) => (
       <div className={`animate-pulse bg-gray-700 rounded ${className}`}></div>
   );
@@ -186,7 +158,6 @@ export default function Home() {
   return (
       <>
         <main className="min-h-screen bg-[linear-gradient(108deg,#151517_0%,#121215_50%,#111014_75%,#0F0E13_100%)]">
-          <style jsx global>{scrollbarStyles}</style>
           {/* Navbar */}
           <nav
               className={`${
@@ -200,23 +171,22 @@ export default function Home() {
           </nav>
 
           <div className="flex flex-row gap-6 justify-center items-start mt-8">
-            <div className="space-y-6">
+            <div className="space-y-6 w-[1000px]">
               {/* Subject Field */}
-              <div className="bg-[#17171A] border border-[#4F5156] rounded-sm min-w-[720px] max-w-[1000px]">
+              <div className="bg-[#17171A] border border-[#4F5156] rounded-sm min-w-[720px] w-full">
                 <div className="flex justify-between items-center flex-row p-2">
-                  <h2 className="text-md text-[#4F5156]">Commit Message</h2>
+                  <div className="flex flex-row text-[#4F5156] justify-center items-center gap-2">
+                    <LuMail />
+                    <h2 className="text-sm">Commit Message</h2>
+                  </div>
                   <div className="relative">
-                    <CopyToClipboard
-                        text={subject}
-                        onCopy={() => handleCopy('subject')}
+                    <button
+                        disabled={!isGenerated || !subject}
+                        onClick={() => copyToClipboard(subject, 'subject')}
+                        className="text-[#4F5156] hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 rounded-md cursor-pointer"
                     >
-                      <button
-                          disabled={!isGenerated || !subject}
-                          className="text-[#4F5156] hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 rounded-md cursor-pointer"
-                      >
-                        {subjectCopied ? <FaCheck /> : <MdOutlineContentCopy />}
-                      </button>
-                    </CopyToClipboard>
+                      {subjectCopied ? <FaCheck /> : <MdOutlineContentCopy />}
+                    </button>
                     {showSubjectTooltip && (
                         <div className="absolute -top-10 right-0 bg-[#1B1B1F] text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
                           Copied!
@@ -225,40 +195,43 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="border-t border-[#4F5156] bg-[#1B1B1F] rounded-b-sm">
                   {isLoading ? (
-                      <Skeleton className="flex-1 h-10" />
+                      <div className="p-2">
+                        <Skeleton className="h-6 w-full" />
+                      </div>
                   ) : (
-                      <input
-                          type="text"
-                          value={subject}
-                          onChange={(e) => isGenerated && setSubject(e.target.value)}
-                          placeholder={isGenerated ? "Subject will appear here..." : "Generate to see subject..."}
-                          className={`flex-1 bg-[#1B1B1F] text-gray-100 border-t border-[#4F5156] p-2 rounded-b-sm focus:outline-none ${isGenerated ? "focus:ring-1 focus:ring-gray-400" : "cursor-not-allowed"}`}
-                          readOnly={!isGenerated}
-                      />
+                      <ScrollArea orientation="horizontal" className="w-full">
+                          <input
+                              type="text"
+                              value={subject}
+                              onChange={(e) => isGenerated && setSubject(e.target.value)}
+                              placeholder={isGenerated ? "Subject will appear here..." : "Generate to see subject..."}
+                              className={`w-full p-2 text-sm bg-transparent text-gray-100 focus:outline-none ${
+                                  isGenerated ? "focus:ring-1 focus:ring-gray-400 px-1" : "cursor-not-allowed"
+                              }`}
+                              readOnly={!isGenerated}
+                          />
+                      </ScrollArea>
                   )}
                 </div>
               </div>
 
               {/* Description Field */}
-              <div className="bg-[#17171A] border border-[#4F5156] rounded-sm h-96xl">
+              <div className="bg-[#17171A] border border-[#4F5156] rounded-sm w-full">
                 <div className="flex justify-between items-center flex-row p-2">
-                  <h2 className="text-md text-[#4F5156]">
-                    Description
-                  </h2>
+                  <div className="flex flex-row text-[#4F5156] justify-center items-center gap-2">
+                    <MdOutlineDescription className="w-4.5 h-4.5" />
+                    <h2 className="text-sm">Description</h2>
+                  </div>
                   <div className="relative">
-                    <CopyToClipboard
-                        text={description}
-                        onCopy={() => handleCopy('description')}
+                    <button
+                        disabled={!isGenerated || !description}
+                        onClick={() => copyToClipboard(description, 'description')}
+                        className="text-[#4F5156] hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 rounded-md cursor-pointer"
                     >
-                      <button
-                          disabled={!isGenerated || !description}
-                          className="text-[#4F5156] hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 rounded-md cursor-pointer"
-                      >
-                        {descriptionCopied ? <FaCheck /> : <MdOutlineContentCopy />}
-                      </button>
-                    </CopyToClipboard>
+                      {descriptionCopied ? <FaCheck /> : <MdOutlineContentCopy />}
+                    </button>
                     {showDescriptionTooltip && (
                         <div className="absolute -top-10 right-0 bg-[#1B1B1F] text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
                           Copied!
@@ -267,18 +240,23 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-                <div className="flex items-start">
+                <div className="border-t border-[#4F5156] bg-[#1B1B1F] rounded-b-sm">
                   {isLoading ? (
-                      <Skeleton className="flex-1 h-36" />
+                      <div className="p-2">
+                        <Skeleton className="h-32 w-full" />
+                      </div>
                   ) : (
-                      <textarea
-                          value={description}
-                          onChange={(e) => isGenerated && setDescription(e.target.value)}
-                          placeholder={isGenerated ? "Description will appear here..." : "Generate to see description..."}
-                          rows={10}
-                          className={`flex-1 bg-[#1B1B1F] text-gray-100 border-t border-[#4F5156] p-2 rounded-b-sm focus:outline-none ${isGenerated ? "focus:ring-1 focus:ring-gray-400" : "cursor-not-allowed"} resize-none custom-scrollbar max-h-96 overflow-y-auto`}
-                          readOnly={!isGenerated}
-                      />
+                      <ScrollArea orientation="vertical" className="h-[500px] w-full rounded-b-sm">
+                        <Textarea
+                            value={description}
+                            onChange={(e) => isGenerated && setDescription(e.target.value)}
+                            placeholder={isGenerated ? "Description will appear here..." : "Generate to see description..."}
+                            className={`w-full min-h-[500px] text-sm bg-transparent text-gray-100 focus:ring-none border-none rounded-none resize-none no-scrollbar ${
+                                isGenerated ? "" : "cursor-not-allowed"
+                            }`}
+                            readOnly={!isGenerated}
+                        />
+                      </ScrollArea>
                   )}
                 </div>
               </div>
@@ -287,9 +265,10 @@ export default function Home() {
             <div className="space-y-6">
               {/* File Upload Card */}
               <Card
-                  className={`p-8 w-100 border-2 border-dashed rounded-md text-center cursor-pointer ${isDragging
-                      ? 'border-blue-400 bg-[#1B1B1F]'
-                      : 'border-[#4F5156] bg-[#1B1B1F]'
+                  className={`p-8 w-100 border-2 border-dashed rounded-md text-center cursor-pointer ${
+                      isDragging
+                          ? 'border-blue-400 bg-[#1B1B1F]'
+                          : 'border-[#4F5156] bg-[#1B1B1F]'
                   }`}
                   onClick={() => fileInputRef.current?.click()}
                   onDragOver={handleDragOver}
@@ -298,11 +277,11 @@ export default function Home() {
               >
                 <div className="space-y-4">
                   {selectedFile ? (
-                      <p className="text-gray-100 font-medium">
+                      <p className="text-gray-100 text-sm">
                         Selected: {selectedFile.name}
                       </p>
                   ) : (
-                      <p className="text-gray-400">
+                      <p className="text-gray-400 text-sm">
                         Drag and drop your .diff file here, or
                       </p>
                   )}
@@ -316,8 +295,9 @@ export default function Home() {
                   />
 
                   <Button
+                      variant="outline"
                       onClick={handleButtonClick}
-                      className="gradient-btn text-gray-900 cursor-pointer rounded-sm"
+                      className="text-[#2251A7] bg-[#091937] border-[#153166] hover:bg-[#081732] hover:text-[#2251A7] cursor-pointer rounded-sm"
                       disabled={isLoading}
                   >
                     <FaRegFolderOpen className="w-6 h-6" />
@@ -333,16 +313,16 @@ export default function Home() {
               <div className="flex justify-end">
                 {/* Generate Button */}
                 <Button
-                    className='w-40 h-12 text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-md gradient-btn cursor-pointer'
+                    className='w-36 h-10 rounded-sm text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-sm gradient-btn cursor-pointer'
                     onClick={handleGenerateClick}
                     disabled={!selectedFile || isLoading}
                 >
                   {isLoading ? (
                       <CgSpinner className="h-4 w-4 animate-spin-fast" />
                   ) : (
-                      <FaMagic className="h-4 w-4" />
+                      <RiSparklingFill className="h-7 w-7" />
                   )}
-                  {isLoading ? 'Generating...' : 'Generate'}
+                  {isLoading ? 'Generating' : 'Generate'}
                 </Button>
               </div>
             </div>
