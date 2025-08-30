@@ -1,12 +1,17 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FaUpload, FaMagic, FaCopy, FaCheck } from 'react-icons/fa';
+import { FaMagic } from 'react-icons/fa';
+import { FaCheck } from 'react-icons/fa6';
 import { CgSpinner } from "react-icons/cg";
 import { CopyToClipboard } from 'react-copy-to-clipboard';
+import { MdOutlineContentCopy } from "react-icons/md"
+import { FaRegFolderOpen } from "react-icons/fa";
+import Image from 'next/image';
+import logo from '../../public/favicon-dark.svg';
 
 // Custom scrollbar styles
 const scrollbarStyles = `
@@ -44,8 +49,19 @@ export default function Home() {
   const [isGenerated, setIsGenerated] = useState(false);
   const [subjectCopied, setSubjectCopied] = useState(false);
   const [descriptionCopied, setDescriptionCopied] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [showSubjectTooltip, setShowSubjectTooltip] = useState(false);
+  const [showDescriptionTooltip, setShowDescriptionTooltip] = useState(false);
 
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 0); // true only when scrolled down
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const resetOutputs = () => {
     setSubject('');
@@ -58,8 +74,8 @@ export default function Home() {
   const validateFile = (file) => {
     const name = file.name.toLowerCase();
     const ok =
-      file.type === 'text/plain' ||
-      name.endsWith('.diff');
+        file.type === 'text/plain' ||
+        name.endsWith('.diff');
     if (!ok) {
       setErrorMessage('Invalid file type. Please upload a .diff file.');
       resetOutputs();
@@ -96,6 +112,7 @@ export default function Home() {
     if (file && validateFile(file)) {
       setSelectedFile(file);
     }
+
     // allow same-file reselect
     e.target.value = '';
   };
@@ -128,9 +145,9 @@ export default function Home() {
       console.error(err);
       setSubject('Error');
       setDescription(
-        (err.response && err.response.data && err.response.data.description) ||
-        err.message ||
-        'An error occurred during processing.'
+          (err.response && err.response.data && err.response.data.description) ||
+          err.message ||
+          'An error occurred during processing.'
       );
       setIsGenerated(true); // Still consider it generated even if it's an error
     } finally {
@@ -142,158 +159,191 @@ export default function Home() {
   const handleCopy = (field) => {
     if (field === 'subject') {
       setSubjectCopied(true);
-      setTimeout(() => setSubjectCopied(false), 2000);
+      setShowSubjectTooltip(true);
+      setTimeout(() => {
+        setSubjectCopied(false);
+        setShowSubjectTooltip(false);
+      }, 2000);
     } else {
       setDescriptionCopied(true);
-      setTimeout(() => setDescriptionCopied(false), 2000);
+      setShowDescriptionTooltip(true);
+      setTimeout(() => {
+        setDescriptionCopied(false);
+        setShowDescriptionTooltip(false);
+      }, 2000);
     }
   };
 
   // Skeleton loading animation component
   const Skeleton = ({ className }) => (
-    <div className={`animate-pulse bg-gray-700 rounded ${className}`}></div>
+      <div className={`animate-pulse bg-gray-700 rounded ${className}`}></div>
   );
 
   return (
-    <main className="min-h-screen p-8 bg-gray-900 text-gray-100">
-      <style jsx global>{scrollbarStyles}</style>
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* File Upload Card */}
-        <Card
-          className={`p-8 border-2 border-dashed rounded-md text-center cursor-pointer ${isDragging
-            ? 'border-teal-400 bg-gray-800'
-            : 'border-gray-700 bg-gray-800'
-            }`}
-          onClick={() => fileInputRef.current?.click()}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          <div className="space-y-4">
-            {selectedFile ? (
-              <p className="text-gray-100 font-medium">
-                Selected: {selectedFile.name}
-              </p>
-            ) : (
-              <p className="text-gray-400">
-                Drag and drop your .diff file here, or
-              </p>
-            )}
+      <>
+        <main className="min-h-screen bg-[linear-gradient(108deg,#151517_0%,#121215_50%,#111014_75%,#0F0E13_100%)]">
+          <style jsx global>{scrollbarStyles}</style>
+          {/* Navbar */}
+          <nav
+              className={`${
+                  isScrolled ? 'fixed top-0 left-0' : 'relative'
+              } w-full z-50 bg-[#17171A] backdrop-blur-md border-b border-[#4F5156] transition-all duration-300`}
+          >
+            <div className="max-w-7xl mx-auto flex items-center gap-3 p-2">
+              <Image src={logo} alt="Logo" width={40} height={40} />
+              <h1 className="text-white text-xl font-bold">Diff2Commit</h1>
+            </div>
+          </nav>
 
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept=".diff,text/plain"
-              onChange={handleFileUpload}
-            />
+          <div className="flex flex-row gap-6 justify-center items-start mt-8">
+            <div className="space-y-6">
+              {/* Subject Field */}
+              <div className="bg-[#17171A] border border-[#4F5156] rounded-sm min-w-[720px] max-w-[1000px]">
+                <div className="flex justify-between items-center flex-row p-2">
+                  <h2 className="text-md text-[#4F5156]">Commit Message</h2>
+                  <div className="relative">
+                    <CopyToClipboard
+                        text={subject}
+                        onCopy={() => handleCopy('subject')}
+                    >
+                      <button
+                          disabled={!isGenerated || !subject}
+                          className="text-[#4F5156] hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 rounded-md cursor-pointer"
+                      >
+                        {subjectCopied ? <FaCheck /> : <MdOutlineContentCopy />}
+                      </button>
+                    </CopyToClipboard>
+                    {showSubjectTooltip && (
+                        <div className="absolute -top-10 right-0 bg-[#1B1B1F] text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+                          Copied!
+                          <div className="absolute top-full right-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#1B1B1F]"></div>
+                        </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {isLoading ? (
+                      <Skeleton className="flex-1 h-10" />
+                  ) : (
+                      <input
+                          type="text"
+                          value={subject}
+                          onChange={(e) => isGenerated && setSubject(e.target.value)}
+                          placeholder={isGenerated ? "Subject will appear here..." : "Generate to see subject..."}
+                          className={`flex-1 bg-[#1B1B1F] text-gray-100 border-t border-[#4F5156] p-2 rounded-b-sm focus:outline-none ${isGenerated ? "focus:ring-1 focus:ring-gray-400" : "cursor-not-allowed"}`}
+                          readOnly={!isGenerated}
+                      />
+                  )}
+                </div>
+              </div>
 
-            <Button
-              variant="outline"
-              onClick={handleButtonClick}
-              className="bg-teal-400 text-gray-900 hover:bg-teal-500 disabled:opacity-50"
-              disabled={isLoading}
-            >
-              <FaUpload className="mr-2 h-4 w-4" />
-              Choose File
-            </Button>
-          </div>
-        </Card>
+              {/* Description Field */}
+              <div className="bg-[#17171A] border border-[#4F5156] rounded-sm h-96xl">
+                <div className="flex justify-between items-center flex-row p-2">
+                  <h2 className="text-md text-[#4F5156]">
+                    Description
+                  </h2>
+                  <div className="relative">
+                    <CopyToClipboard
+                        text={description}
+                        onCopy={() => handleCopy('description')}
+                    >
+                      <button
+                          disabled={!isGenerated || !description}
+                          className="text-[#4F5156] hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 rounded-md cursor-pointer"
+                      >
+                        {descriptionCopied ? <FaCheck /> : <MdOutlineContentCopy />}
+                      </button>
+                    </CopyToClipboard>
+                    {showDescriptionTooltip && (
+                        <div className="absolute -top-10 right-0 bg-[#1B1B1F] text-white text-xs px-2 py-1 rounded shadow-lg whitespace-nowrap z-10">
+                          Copied!
+                          <div className="absolute top-full right-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#1B1B1F]"></div>
+                        </div>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  {isLoading ? (
+                      <Skeleton className="flex-1 h-36" />
+                  ) : (
+                      <textarea
+                          value={description}
+                          onChange={(e) => isGenerated && setDescription(e.target.value)}
+                          placeholder={isGenerated ? "Description will appear here..." : "Generate to see description..."}
+                          rows={10}
+                          className={`flex-1 bg-[#1B1B1F] text-gray-100 border-t border-[#4F5156] p-2 rounded-b-sm focus:outline-none ${isGenerated ? "focus:ring-1 focus:ring-gray-400" : "cursor-not-allowed"} resize-none custom-scrollbar max-h-96 overflow-y-auto`}
+                          readOnly={!isGenerated}
+                      />
+                  )}
+                </div>
+              </div>
+            </div>
 
-        {errorMessage && (
-          <p className="text-red-500 text-sm mt-2">{errorMessage}</p>
-        )}
-
-        {/* Generate Button */}
-        <Button
-          className={
-            'w-full bg-teal-400 text-gray-900 hover:bg-teal-500 ' +
-            'disabled:opacity-50 disabled:cursor-not-allowed ' +
-            'flex items-center justify-center'
-          }
-          onClick={handleGenerateClick}
-          disabled={!selectedFile || isLoading}
-        >
-          {isLoading ? (
-            <CgSpinner className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <FaMagic className="mr-2 h-4 w-4" />
-          )}
-          {isLoading ? 'Generating...' : 'Generate'}
-        </Button>
-
-        {/* Always-visible Subject & Description */}
-        <div className="space-y-6 mt-6">
-          {/* Subject Field */}
-          <div className="bg-gray-800 border border-gray-700 p-4 rounded-md shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-100 mb-2">
-              Subject
-            </h2>
-            <div className="flex items-center space-x-2">
-              {isLoading ? (
-                <Skeleton className="flex-1 h-10" />
-              ) : (
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => isGenerated && setSubject(e.target.value)}
-                  placeholder={isGenerated ? "Subject will appear here..." : "Generate to see subject..."}
-                  className={`flex-1 bg-gray-700 text-gray-100 p-2 rounded focus:outline-none ${isGenerated ? "focus:ring-2 focus:ring-teal-400" : "cursor-not-allowed"}`}
-                  readOnly={!isGenerated}
-                />
-              )}
-              <CopyToClipboard
-                text={subject}
-                onCopy={() => handleCopy('subject')}
-                className="rounded-md"
+            <div className="space-y-6">
+              {/* File Upload Card */}
+              <Card
+                  className={`p-8 border-2 border-dashed rounded-md text-center cursor-pointer ${isDragging
+                      ? 'border-blue-400 bg-[#1B1B1F]'
+                      : 'border-[#4F5156] bg-[#1B1B1F]'
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
               >
+                <div className="space-y-4">
+                  {selectedFile ? (
+                      <p className="text-gray-100 font-medium">
+                        Selected: {selectedFile.name}
+                      </p>
+                  ) : (
+                      <p className="text-gray-400">
+                        Drag and drop your .diff file here, or
+                      </p>
+                  )}
+
+                  <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept=".diff,text/plain"
+                      onChange={handleFileUpload}
+                  />
+
+                  <Button
+                      onClick={handleButtonClick}
+                      className="gradient-btn text-gray-900 cursor-pointer rounded-sm"
+                      disabled={isLoading}
+                  >
+                    <FaRegFolderOpen className="w-6 h-6" />
+                    Choose File
+                  </Button>
+                </div>
+              </Card>
+
+              {errorMessage && (
+                  <p className="text-red-500 text-sm mt-2">{errorMessage}</p>
+              )}
+
+              <div className="flex justify-end">
+                {/* Generate Button */}
                 <Button
-                  variant="ghost"
-                  className="text-teal-400 hover:text-teal-500"
-                  disabled={!isGenerated || !subject}
+                    className='w-40 h-12 text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-md gradient-btn cursor-pointer'
+                    onClick={handleGenerateClick}
+                    disabled={!selectedFile || isLoading}
                 >
-                  {subjectCopied ? <FaCheck /> : <FaCopy />}
+                  {isLoading ? (
+                      <CgSpinner className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                      <FaMagic className="mr-2 h-4 w-4" />
+                  )}
+                  {isLoading ? 'Generating...' : 'Generate'}
                 </Button>
-              </CopyToClipboard>
+              </div>
             </div>
           </div>
-
-          {/* Description Field */}
-          <div className="bg-gray-800 border border-gray-700 p-4 rounded-md shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-100 mb-2">
-              Description
-            </h2>
-            <div className="flex items-start space-x-2">
-              {isLoading ? (
-                <Skeleton className="flex-1 h-36" />
-              ) : (
-                <textarea
-                  value={description}
-                  onChange={(e) => isGenerated && setDescription(e.target.value)}
-                  placeholder={isGenerated ? "Description will appear here..." : "Generate to see description..."}
-                  rows={10}
-                  className={`flex-1 bg-gray-700 text-gray-100 p-2 rounded focus:outline-none ${isGenerated ? "focus:ring-2 focus:ring-teal-400" : "cursor-not-allowed"} resize-none custom-scrollbar max-h-96 overflow-y-auto`}
-                  readOnly={!isGenerated}
-                />
-              )}
-              <CopyToClipboard
-                text={description}
-                onCopy={() => handleCopy('description')}
-                className="rounded-md"
-                disabled={!isGenerated || !description}
-              >
-                <Button
-                  variant="ghost"
-                  className="text-teal-400 hover:text-teal-500 mt-1"
-                  disabled={!isGenerated || !description}
-                >
-                  {descriptionCopied ? <FaCheck /> : <FaCopy />}
-                </Button>
-              </CopyToClipboard>
-            </div>
-          </div>
-        </div>
-      </div>
-    </main>
+        </main>
+      </>
   );
 }

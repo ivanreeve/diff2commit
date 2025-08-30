@@ -133,3 +133,13 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .gradient-btn {
+    background: linear-gradient(180deg, #009DFF 0%, #005E99 100%);
+  }
+
+  .gradient-btn:hover {
+    opacity: 0.7;
+  }
+}
