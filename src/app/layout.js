@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Diff to Commit',
+  title: 'Diff2Commit',
   description: 'Convert diff files to commit messages',
   icons: {
     icon: [

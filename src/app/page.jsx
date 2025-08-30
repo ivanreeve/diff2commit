@@ -17,7 +17,7 @@ import logo from '../../public/favicon-dark.svg';
 const scrollbarStyles = `
   /* Firefox */
   * {
-    scrollbar-width: thick;
+    scrollbar-width: thin;
     scrollbar-color: #2dd4bf #1f2937;
   }
   
@@ -36,6 +36,10 @@ const scrollbarStyles = `
   
   *::-webkit-scrollbar-thumb:hover {
     background-color: #14b8a6;
+  }
+  
+  *::-webkit-scrollbar-button {
+    display: none;
   }
 `;
 
@@ -283,7 +287,7 @@ export default function Home() {
             <div className="space-y-6">
               {/* File Upload Card */}
               <Card
-                  className={`p-8 border-2 border-dashed rounded-md text-center cursor-pointer ${isDragging
+                  className={`p-8 w-100 border-2 border-dashed rounded-md text-center cursor-pointer ${isDragging
                       ? 'border-blue-400 bg-[#1B1B1F]'
                       : 'border-[#4F5156] bg-[#1B1B1F]'
                   }`}
@@ -334,9 +338,9 @@ export default function Home() {
                     disabled={!selectedFile || isLoading}
                 >
                   {isLoading ? (
-                      <CgSpinner className="mr-2 h-4 w-4 animate-spin" />
+                      <CgSpinner className="h-4 w-4 animate-spin-fast" />
                   ) : (
-                      <FaMagic className="mr-2 h-4 w-4" />
+                      <FaMagic className="h-4 w-4" />
                   )}
                   {isLoading ? 'Generating...' : 'Generate'}
                 </Button>
