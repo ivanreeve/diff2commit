@@ -313,7 +313,7 @@ export default function Home() {
               <div className="flex justify-end">
                 {/* Generate Button */}
                 <Button
-                    className={`w-36 h-10 rounded-sm bg-[#17171A] text-[#4F5156] disabled:cursor-not-allowed disabled:opacity-100 flex items-center justify-center text-sm cursor-pointer ${(selectedFile || isLoading) && 'gradient-btn text-gray-900'}`}
+                    className={`w-36 h-10 rounded-sm bg-[#232426] text-[#4F5156] disabled:cursor-not-allowed disabled:opacity-100 flex items-center justify-center text-sm cursor-pointer ${(selectedFile || isLoading) && 'gradient-btn text-gray-900'}`}
                     onClick={handleGenerateClick}
                     disabled={!selectedFile || isLoading}
                 >
