@@ -170,10 +170,10 @@ export default function Home() {
             </div>
           </nav>
 
-          <div className="flex flex-row gap-6 justify-center items-start mt-8">
-            <div className="space-y-6 w-[1000px]">
+          <div className="flex min-[850px]:flex-row flex-col-reverse gap-6 justify-center items-start p-8">
+            <div className="space-y-6 w-full max-w-[1000px]">
               {/* Subject Field */}
-              <div className="bg-[#17171A] border border-[#4F5156] rounded-sm min-w-[720px] w-full">
+              <div className="bg-[#17171A] border border-[#4F5156] rounded-sm w-full">
                 <div className="flex justify-between items-center flex-row p-2">
                   <div className="flex flex-row text-[#4F5156] justify-center items-center gap-2">
                     <LuMail />
@@ -262,10 +262,10 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 w-full min-[850px]:max-w-sm">
               {/* File Upload Card */}
               <Card
-                  className={`p-8 w-100 border-2 border-dashed rounded-md text-center cursor-pointer ${
+                  className={`p-8 w-full border-2 border-dashed rounded-md text-center cursor-pointer ${
                       isDragging
                           ? 'border-blue-400 bg-[#1B1B1F]'
                           : 'border-[#4F5156] bg-[#1B1B1F]'
